@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import asyncio
 
-from .connectors import arxiv, crossref, dergipark, doaj, eric, europepmc, hal, openalex, semantic_scholar, trdizin
+from .connectors import arxiv, cochrane, crossref, dergipark, doaj, eric, europepmc, hal, openalex, semantic_scholar, trdizin
 from .models import Paper
 from .normalize import dedupe_key
 
@@ -18,6 +18,7 @@ CONNECTORS = {
     "eric": eric.search,
     "doaj": doaj.search,
     "hal": hal.search,
+    "cochrane": cochrane.search,
 }
 # Fikre göre kaynak seçimi için: her veritabanının kapsamı (LLM'e ve arayüze gösterilir).
 CATALOG = {
@@ -28,6 +29,7 @@ CATALOG = {
     "trdizin": "TÜBİTAK ULAKBİM TR Dizin: Türkiye'deki hakemli dergiler, tüm alanlar",
     "dergipark": "DergiPark: Türk akademik dergileri (yerel dizin; sanat, sosyal, eğitim ağırlıklı)",
     "europepmc": "PubMed/MEDLINE + PMC + ön baskılar: tıp, sağlık, yaşam bilimleri, psikoloji",
+    "cochrane": "Cochrane: tıp ve sağlıkta sistematik derlemeler/meta-analizler (kanıta dayalı tıp)",
     "eric": "ERIC: eğitim bilimleri, öğretim, öğrenme, eğitim politikası",
     "doaj": "DOAJ: hakemli açık erişim dergiler, tüm alanlar, çok dilli",
     "hal": "HAL: Fransa/Avrupa açık arşivi, beşeri ve sosyal bilimler dahil tüm alanlar",
