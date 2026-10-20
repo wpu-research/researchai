@@ -20,6 +20,13 @@ Canlı: https://researchai-production-a364.up.railway.app (Railway projesi `rese
 ⚑ İnsan kapısı: onay için en az 15 karakterlik gerekçe gerekir; not beyana girer.
 Bir aşama yeniden çalıştırılır ya da düzenlenirse o ve sonraki aşamaların onayı düşer.
 
+## Veritabanları
+1. aşama fikre uyan veritabanlarını gerekçeleriyle seçer; kullanıcı değiştirebilir, 2. aşama yalnız seçililerde arar.
+Ücretsiz: OpenAlex, Crossref, Semantic Scholar, arXiv, TR Dizin, DergiPark, Europe PMC (PubMed), Cochrane (CDSR),
+ERIC, DOAJ, HAL. **Embase ve Scopus** kullanıcının kişisel Elsevier API anahtarıyla, sunucudan değil kullanıcının
+tarayıcısından aranır: anahtar yalnız tarayıcıda (localStorage) durur, sunucuya yalnız bulunan kayıtlar gelir. Kurum
+aboneliği IP ile tanındığından kampüs ağı/VPN ya da kurum token'ı gerekir; Embase API erişimini Elsevier ayrıca açar.
+
 ## Dürüstlük önlemleri
 - Atıflar yalnız seçili kaynak numaralarıyla ([i]) yapılır; her atıflı cümle kaynağın özetiyle denetlenir.
 - Bulgular/Çözümleme yöntem planını görmeden, yalnız yazarın girdiği sonuçlardan yazılır; atıfsız cümleler

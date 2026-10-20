@@ -33,7 +33,12 @@ CATALOG = {
     "eric": "ERIC: eğitim bilimleri, öğretim, öğrenme, eğitim politikası",
     "doaj": "DOAJ: hakemli açık erişim dergiler, tüm alanlar, çok dilli",
     "hal": "HAL: Fransa/Avrupa açık arşivi, beşeri ve sosyal bilimler dahil tüm alanlar",
+    "embase": "Embase (Elsevier): biyotıp, farmakoloji, ilaç ve klinik araştırma; Emtree indeksleme",
+    "scopus": "Scopus (Elsevier): tüm disiplinler, geniş hakemli dergi ve konferans kapsamı",
 }
+# Kullanıcının kişisel Elsevier API anahtarıyla, sunucudan değil kullanıcının tarayıcısından aranır:
+# anahtar sunucuya gelmez ve istek kurum IP'sinden çıktığı için kurumsal abonelik tanınır.
+BROWSER_SOURCES = {"embase", "scopus"}
 DEFAULT_SOURCES = ["openalex", "crossref", "semantic_scholar", "arxiv", "trdizin"]
 
 

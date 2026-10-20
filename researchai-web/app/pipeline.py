@@ -13,9 +13,9 @@ import io
 import time
 
 from researchai_mcp import disclosure
-from researchai_mcp.normalize import dedupe_key
 from researchai_mcp.connectors import dergipark
-from researchai_mcp.search import CATALOG, DEFAULT_SOURCES, search_sources
+from researchai_mcp.normalize import clean_doi, dedupe_key
+from researchai_mcp.search import BROWSER_SOURCES, CATALOG, CONNECTORS, DEFAULT_SOURCES, search_sources
 from researchai_mcp.verify import Citation, verify_citation
 
 from . import db, llm, text
@@ -70,9 +70,10 @@ def _src_line(s: dict, with_notes: bool = True, abstract_chars: int = 500) -> st
 
 
 # ---------------------------------------------------------------- 1. Fikir
-def databases() -> dict[str, str]:
-    """Bu sunucuda aranabilen veritabanları ve kapsamları."""
-    return {k: v for k, v in CATALOG.items() if k != "dergipark" or dergipark.available()}
+def databases(keyed: bool = True) -> dict[str, str]:
+    """Aranabilen veritabanları ve kapsamları; keyed=False ise kişisel anahtar isteyenler hariç."""
+    return {k: v for k, v in CATALOG.items()
+            if (k != "dergipark" or dergipark.available()) and (keyed or k not in BROWSER_SOURCES)}
 
 
 def pick_databases(raw) -> list[dict]:
@@ -90,7 +91,7 @@ def pick_databases(raw) -> list[dict]:
 async def stage1(pid: str, opts: dict) -> dict:
     pr = _proj(pid)
     progress(pid, 1, "Araştırma sorusu, kapsam kartı ve veritabanı seçimi hazırlanıyor")
-    catalog = "\n".join(f"- {k}: {v}" for k, v in databases().items())
+    catalog = "\n".join(f"- {k}: {v}" for k, v in databases(keyed=bool(opts.get("elsevier"))).items())
     card = await ask_json(pid, 1, "araştırma sorusu, kapsam kartı ve veritabanı seçimi", f"""Sen deneyimli bir araştırma danışmanısın.
 Ham bir fikri, dergiye gidecek bir çalışmanın kapsam kartına çevir. Gerçekçi ol; tek bir makaleye sığacak kadar daralt.
 Literatür taraması için aşağıdaki veritabanlarından fikrin alanına uyanları seç. En az bir genel dizin (openalex ya da
@@ -126,20 +127,34 @@ async def stage2(pid: str, opts: dict) -> dict:
         raise ValueError("1. aşamada arama sorgusu yok")
     yf = card.get("year_from") if isinstance(card.get("year_from"), int) else None
     dbs = [d["name"] for d in pick_databases(card.get("databases"))]
+    server_dbs = [n for n in dbs if n in CONNECTORS]
     merged: dict[str, dict] = {}
-    errors: dict[str, str] = {}
-    for k, q in enumerate(queries, 1):  # sıralı: kaynakların hız sınırlarına saygı
+    errors: dict[str, str] = dict(opts.get("external_errors") or {})
+
+    def add(p: dict, q: str) -> None:
+        key = dedupe_key(p.get("doi"), p["title"], (p.get("authors") or [""])[0], p.get("year"))
+        if key in merged:
+            merged[key]["found_in"] = sorted(set(merged[key]["found_in"]) | set(p["found_in"]))
+            merged[key]["queries"].append(q)
+            for f in ("abstract", "doi", "venue"):
+                if not merged[key].get(f) and p.get(f):
+                    merged[key][f] = p[f]
+        else:
+            merged[key] = {**p, "queries": [q]}
+
+    for k, q in enumerate(queries if server_dbs else [], 1):  # sıralı: kaynakların hız sınırlarına saygı
         progress(pid, 2, f"Arama {k}/{len(queries)}: {q}")
-        res = await search_sources(q, sources=dbs, limit=8, year_from=yf)
+        res = await search_sources(q, sources=server_dbs, limit=8, year_from=yf)
         for name, err in res["errors"].items():
             errors[name] = err
         for p in res["results"]:
-            key = dedupe_key(p.get("doi"), p["title"], (p.get("authors") or [""])[0], p.get("year"))
-            if key in merged:
-                merged[key]["found_in"] = sorted(set(merged[key]["found_in"]) | set(p["found_in"]))
-                merged[key]["queries"].append(q)
-            else:
-                merged[key] = {**p, "queries": [q]}
+            add(p, q)
+    for e in opts.get("external") or []:  # tarayıcıda kişisel anahtarla aranan Embase/Scopus sonuçları
+        if e.get("source") in BROWSER_SOURCES and e.get("source") in dbs:
+            add({"title": e["title"], "authors": e.get("authors") or [], "year": e.get("year"),
+                 "venue": e.get("venue"), "doi": clean_doi(e.get("doi")), "abstract": e.get("abstract"),
+                 "url": e.get("url"), "source": e["source"], "oa_url": None, "alt_titles": [],
+                 "found_in": [e["source"]]}, e.get("query") or "")
     cands = sorted(merged.values(), key=lambda p: (-len(p["found_in"]) - len(p["queries"]), not p.get("abstract")))[:60]
     if not cands:
         raise ValueError("hiç aday bulunamadı; sorguları düzenleyip yeniden deneyin. Kaynak hataları: " + str(errors))

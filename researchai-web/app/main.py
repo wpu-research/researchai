@@ -12,6 +12,8 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from . import db, llm, pipeline, text
@@ -64,8 +66,24 @@ class NewProject(BaseModel):
     language: str = Field(default="tr", pattern="^(tr|en)$")
 
 
+class ExternalPaper(BaseModel):
+    """Kullanıcının tarayıcısında kişisel API anahtarıyla bulunan kayıt (anahtarın kendisi gelmez)."""
+    source: Literal["embase", "scopus"]
+    query: str = Field(default="", max_length=300)
+    title: str = Field(min_length=1, max_length=1000)
+    authors: list[str] = Field(default_factory=list, max_length=200)
+    year: int | None = None
+    venue: str | None = Field(default=None, max_length=500)
+    doi: str | None = Field(default=None, max_length=300)
+    abstract: str | None = Field(default=None, max_length=20000)
+    url: str | None = Field(default=None, max_length=1000)
+
+
 class RunOpts(BaseModel):
     venue: str | None = None
+    elsevier: bool = False  # kullanıcının tarayıcısında Elsevier anahtarı kayıtlı mı
+    external: list[ExternalPaper] = Field(default_factory=list, max_length=800)
+    external_errors: dict[str, str] = Field(default_factory=dict, max_length=10)
 
 
 class StageEdit(BaseModel):
@@ -126,7 +144,8 @@ def meta():
             n = con.execute("SELECT COUNT(*) c FROM records").fetchone()["c"]
     return {"llm": llm.enabled(), "models": {"main": llm.model_main(), "fast": llm.model_fast(),
                                              "reviewer": llm.model_reviewer()},
-            "databases": [{"name": k, "desc": v} for k, v in pipeline.databases().items()],
+            "databases": [{"name": k, "desc": v, "keyed": k in pipeline.BROWSER_SOURCES}
+                          for k, v in pipeline.databases().items()],
             "stages": db.STAGES, "gates": sorted(db.GATES),
             "dergipark": {"records": n, "sets": DERGIPARK_SETS, **HARVEST}}
 

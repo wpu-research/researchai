@@ -3,8 +3,8 @@ const $app = document.getElementById('app');
 const S = { meta: null, project: null, stage: 1, srcFilter: 'selected', poll: null, panelSig: '', disclosureLang: 'tr' };
 
 const STAGE = {
-  1: { c: 'var(--s1)', what: 'Ham fikir netleşir: araştırma sorusu, kapsam, arama sorguları ve ölçütler yazılır.', tools: 'Kapsam kartı · arama sorguları' },
-  2: { c: 'var(--s2)', what: 'OpenAlex, Crossref, Semantic Scholar, arXiv, TR Dizin ve DergiPark taranır; adaylar ilgiye göre elenir.', tools: '6 kaynak · tekilleştirme · LLM eleme' },
+  1: { c: 'var(--s1)', what: 'Ham fikir netleşir: araştırma sorusu, kapsam, arama sorguları ve ölçütler yazılır; fikre uyan veritabanları seçilir.', tools: 'Kapsam kartı · arama sorguları · veritabanı seçimi' },
+  2: { c: 'var(--s2)', what: '1. aşamada seçilen veritabanları taranır (Embase/Scopus kişisel anahtarla tarayıcınızdan); adaylar ilgiye göre elenir.', tools: 'Seçili veritabanları · tekilleştirme · LLM eleme' },
   3: { c: 'var(--s3)', what: 'Seçili kaynaklardan not çıkarılır; temalar, kimsenin sınamadığı boşluklar ve hipotezler kurulur.', tools: 'Not çıkarma · boşluk haritası' },
   4: { c: 'var(--s4)', what: 'Yöntem ve veri planı yazılır. Sonuçları siz girersiniz: sistem veri uydurmaz, deney kodu çalıştırmaz.', tools: 'Yöntem planı · TR veri kaynakları' },
   5: { c: 'var(--s5)', what: 'Kanıta bağlı taslak: her olgusal cümle seçili bir kaynağa bağlanır ve kaynağın özetiyle denetlenir.', tools: 'Bölüm bölüm yazım · iddia-kaynak denetimi' },
@@ -19,6 +19,90 @@ const lines = (a) => (Array.isArray(a) ? a.join('\n') : a || '');
 const unlines = (s) => s.split('\n').map((x) => x.trim()).filter(Boolean);
 const fmtDate = (t) => (t ? new Date(t * 1000).toLocaleString('tr-TR', { dateStyle: 'medium', timeStyle: 'short' }) : '');
 const ul = (a) => (a && a.length ? `<ul class="list-plain">${a.map((x) => `<li>${esc(typeof x === 'string' ? x : JSON.stringify(x))}</li>`).join('')}</ul>` : '<span class="muted">—</span>');
+
+// ---------------------------------------------------------------- Elsevier (Embase/Scopus), kişisel anahtar
+// Anahtar yalnız bu tarayıcıda durur; arama doğrudan tarayıcıdan Elsevier'e gider (sunucuya anahtar gelmez).
+const ELS = 'https://api.elsevier.com/content';
+const elsKey = () => { try { return JSON.parse(localStorage.getItem('elsevier') || '{}'); } catch { return {}; } };
+const elsSave = (v) => { try { localStorage.setItem('elsevier', JSON.stringify(v)); return true; } catch { return false; } };
+const hasEls = () => !!elsKey().apiKey;
+
+async function elsGet(path, params) {
+  const k = elsKey();
+  const q = new URLSearchParams({ ...params, apiKey: k.apiKey, ...(k.insttoken ? { insttoken: k.insttoken } : {}) });
+  const r = await fetch(`${ELS}/${path}?${q}`);
+  if (!r.ok) {
+    const t = await r.text().catch(() => '');
+    const msg = (t.match(/"statusText"\s*:\s*"([^"]+)"/) || t.match(/<statusText>([^<]+)/) || [])[1] || '';
+    const err = new Error(`HTTP ${r.status}${msg ? ` ${msg}` : ''}${r.status === 401 || r.status === 403 ? ' (anahtar ya da kurum erişimi geçersiz; kampüs ağı/VPN gerekebilir)' : ''}`);
+    err.status = r.status;
+    throw err;
+  }
+  return r;
+}
+
+async function scopusSearch(q, yf, count = 8) {
+  const params = { query: `TITLE-ABS-KEY(${q})`, count, httpAccept: 'application/json', ...(yf ? { date: `${yf}-2100` } : {}) };
+  let r;
+  try { r = await elsGet('search/scopus', { ...params, view: 'COMPLETE' }); } catch (e) {
+    if (e.status !== 400 && e.status !== 403) throw e;
+    r = await elsGet('search/scopus', params); // COMPLETE görünümüne yetki yoksa özetsiz STANDARD
+  }
+  const entries = ((await r.json())['search-results'] || {}).entry || [];
+  return entries.filter((e) => !e.error && e['dc:title']).map((e) => ({
+    source: 'scopus', query: q, title: e['dc:title'],
+    authors: (e.author || []).map((a) => a.authname).filter(Boolean).concat(e.author ? [] : [e['dc:creator']].filter(Boolean)),
+    year: parseInt((e['prism:coverDate'] || '').slice(0, 4), 10) || null,
+    venue: e['prism:publicationName'] || null, doi: e['prism:doi'] || null, abstract: e['dc:description'] || null,
+    url: ((e.link || []).find((l) => l['@ref'] === 'scopus') || {})['@href'] || null,
+  }));
+}
+
+const xAll = (el, name) => [...el.getElementsByTagNameNS('*', name)];
+const xText = (el, name) => (xAll(el, name)[0]?.textContent || '').replace(/\s+/g, ' ').trim();
+
+async function embaseSearch(q, yf, count = 8) {
+  const words = q.split(/\s+/).filter(Boolean);
+  const query = `(${words.join(' AND ')}):ti,ab${yf ? ` AND [${yf}-2100]/py` : ''}`;
+  const r = await elsGet('embase/article', { query, count, httpaccept: 'application/daas-xml' });
+  const doc = new DOMParser().parseFromString(await r.text(), 'application/xml');
+  return xAll(doc, 'bibrecord').map((b) => {
+    const head = xAll(b, 'head')[0] || b;
+    const titles = xAll(head, 'titletext');
+    const title = ((titles.find((t) => t.getAttribute('original') === 'y') || titles[0])?.textContent || '').trim();
+    const authors = xAll(head, 'author-group').flatMap((g) => xAll(g, 'author')).map((a) => xText(a, 'indexed-name')).filter(Boolean);
+    const src = xAll(head, 'source')[0];
+    const year = parseInt(src && (xAll(src, 'publicationyear')[0]?.getAttribute('first') || xText(src, 'year')), 10) || null;
+    const doi = xText(b, 'doi') || null;
+    return { source: 'embase', query: q, title, authors: [...new Set(authors)], year,
+      venue: src ? xText(src, 'sourcetitle') || null : null, doi,
+      abstract: xAll(head, 'abstract').map((a) => xAll(a, 'para').map((x) => x.textContent).join(' ')).join(' ').replace(/\s+/g, ' ').trim() || null,
+      url: doi ? `https://doi.org/${doi}` : null };
+  }).filter((x) => x.title);
+}
+
+// 2. aşamadan önce: kartta seçili Embase/Scopus varsa tarayıcıda ara, sonuçları sunucuya ver.
+async function browserSearch(card) {
+  const want = (card.databases || []).map((d) => d.name).filter((n) => n === 'embase' || n === 'scopus');
+  const out = { external: [], external_errors: {} };
+  if (!want.length) return out;
+  if (!hasEls()) {
+    want.forEach((n) => { out.external_errors[n] = 'Elsevier API anahtarı girilmemiş (1. aşama → Veritabanları)'; });
+    return out;
+  }
+  const queries = (card.search_queries || []).filter((q) => q.trim()).slice(0, 8);
+  const yf = Number.isInteger(card.year_from) ? card.year_from : null;
+  for (const n of want) {
+    for (const [k, q] of queries.entries()) {
+      toast(`${n === 'embase' ? 'Embase' : 'Scopus'} aranıyor ${k + 1}/${queries.length}`);
+      try { out.external.push(...await (n === 'embase' ? embaseSearch : scopusSearch)(q, yf)); } catch (e) {
+        out.external_errors[n] = e.message.slice(0, 200);
+        break;
+      }
+    }
+  }
+  return out;
+}
 
 async function api(method, path, body) {
   const r = await fetch(path, { method, headers: body ? { 'content-type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
@@ -270,7 +354,10 @@ function bindPanel(s, p) {
     el.onclick = async () => {
       const a = el.dataset.act;
       if (a === 'run') {
-        const body = s.n === 8 ? { venue: document.getElementById('venue')?.value || '' } : undefined;
+        let body;
+        if (s.n === 8) body = { venue: document.getElementById('venue')?.value || '' };
+        else if (s.n === 1) body = { elsevier: hasEls() };
+        else if (s.n === 2) body = await browserSearch(p.stages[0].data || {});
         if (await act(() => api('POST', `/api/projects/${p.id}/stages/${s.n}/run`, body), 'Aşama başlatıldı')) loadProject(p.id);
       } else if (a === 'cancel') {
         await act(() => api('POST', `/api/projects/${p.id}/stages/${s.n}/cancel`));
@@ -322,11 +409,21 @@ STAGE_VIEW[1] = (s) => {
   const picked = new Map((d.databases || []).map((x) => [x.name, x.reason]));
   const dbs = (S.meta?.databases || []).map((x) => `<label class="db-opt">
       <input type="checkbox" data-db="${esc(x.name)}" ${picked.has(x.name) ? 'checked' : ''}>
-      <span><b>${esc(x.name)}</b> <span class="small muted">${esc(x.desc)}</span>
+      <span><b>${esc(x.name)}</b>${x.keyed ? ` <span class="tag" title="Kişisel Elsevier API anahtarı gerekir">🔑 ${hasEls() ? 'anahtar var' : 'anahtar gerekli'}</span>` : ''} <span class="small muted">${esc(x.desc)}</span>
       ${picked.get(x.name) ? `<br><span class="small">↳ ${esc(picked.get(x.name))}</span>` : ''}</span></label>`).join('');
   return `<div class="grid-2">${F1.map(field).join('')}</div>
     <div class="subhead">Veritabanları <span class="small muted">(2. aşama yalnız işaretlilerde arar)</span></div>
     <div class="db-list">${dbs}</div>
+    <details class="add"><summary>🔑 Elsevier API anahtarı (Embase / Scopus)${hasEls() ? ' — kayıtlı' : ''}</summary>
+      <div class="grid-2" style="margin-top:12px">
+        <label class="field"><span>API anahtarı (dev.elsevier.com, kurumsal hesapla)</span><input type="password" id="els-key" value="${esc(elsKey().apiKey || '')}" autocomplete="off"></label>
+        <label class="field"><span>Kurum token'ı (insttoken, varsa)</span><input type="password" id="els-inst" value="${esc(elsKey().insttoken || '')}" autocomplete="off"></label>
+      </div>
+      <p class="small muted">Anahtar yalnız bu tarayıcıda saklanır, sunucumuza gönderilmez; Embase/Scopus araması tarayıcınızdan doğrudan Elsevier'e yapılır.
+        Kurum aboneliği IP ile tanındığından kampüs ağında ya da üniversite VPN'inde olmalısınız (kurum token'ı varsa gerekmez).
+        Embase API erişimi Elsevier tarafından ayrıca açılmış olmalıdır.</p>
+      <div class="row"><button class="btn btn-sm" id="els-save">Kaydet</button> <button class="btn btn-sm" id="els-test">Bağlantıyı dene</button> <button class="btn btn-sm" id="els-del">Sil</button></div>
+    </details>
     ${d.risks?.length ? `<div class="subhead">Riskler</div><div class="warn-box">${ul(d.risks)}</div>` : ''}
     <div class="row" style="margin-top:16px"><button class="btn" id="save1">Değişiklikleri kaydet</button>
     <span class="small muted">Kaydetmek bu ve sonraki aşamaların onayını düşürür.</span></div>`;
@@ -334,6 +431,22 @@ STAGE_VIEW[1] = (s) => {
 STAGE_BIND[1] = () => {
   const b = document.getElementById('save1');
   if (!b) return;
+  const rerender = () => { S.panelSig = ''; loadProject(S.project.id); };
+  document.getElementById('els-save').onclick = () => {
+    const apiKey = document.getElementById('els-key').value.trim();
+    const insttoken = document.getElementById('els-inst').value.trim();
+    if (!apiKey) return toast('API anahtarı boş', true);
+    const ok = elsSave({ apiKey, insttoken });
+    toast(ok ? 'Anahtar bu tarayıcıya kaydedildi' : 'Tarayıcı depolaması kullanılamıyor', !ok);
+    rerender();
+  };
+  document.getElementById('els-del').onclick = () => { try { localStorage.removeItem('elsevier'); } catch {} toast('Anahtar silindi'); rerender(); };
+  document.getElementById('els-test').onclick = async () => {
+    if (!hasEls()) return toast('Önce anahtarı kaydedin', true);
+    for (const [n, f] of [['Scopus', scopusSearch], ['Embase', embaseSearch]]) {
+      try { const r = await f('diabetes', null, 1); toast(`${n}: bağlantı tamam (${r.length} kayıt)`); } catch (e) { toast(`${n}: ${e.message}`, true); }
+    }
+  };
   b.onclick = () => {
     const data = {};
     document.querySelectorAll('#stage-body [data-k]').forEach((el) => {

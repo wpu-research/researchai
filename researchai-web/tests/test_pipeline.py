@@ -21,3 +21,9 @@ def test_pick_databases_filters_unknown_and_falls_back():
     assert [d["name"] for d in out] == ["eric", "openalex"]
     assert out[0]["reason"] == "eğitim"
     assert [d["name"] for d in pick_databases(None)] == ["openalex", "crossref", "semantic_scholar", "arxiv", "trdizin"]
+
+
+def test_keyed_databases_hidden_without_key():
+    from app.pipeline import databases
+    assert {"embase", "scopus"} <= set(databases())
+    assert not {"embase", "scopus"} & set(databases(keyed=False))
