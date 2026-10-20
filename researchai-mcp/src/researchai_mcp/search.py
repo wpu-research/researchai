@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import asyncio
 
-from .connectors import arxiv, crossref, dergipark, openalex, semantic_scholar, trdizin
+from .connectors import arxiv, crossref, dergipark, doaj, eric, europepmc, hal, openalex, semantic_scholar, trdizin
 from .models import Paper
 from .normalize import dedupe_key
 
@@ -14,6 +14,23 @@ CONNECTORS = {
     "arxiv": arxiv.search,
     "trdizin": trdizin.search,
     "dergipark": dergipark.search,
+    "europepmc": europepmc.search,
+    "eric": eric.search,
+    "doaj": doaj.search,
+    "hal": hal.search,
+}
+# Fikre göre kaynak seçimi için: her veritabanının kapsamı (LLM'e ve arayüze gösterilir).
+CATALOG = {
+    "openalex": "Tüm disiplinler; 250M+ kayıt, en geniş genel dizin",
+    "crossref": "Tüm disiplinler; DOI'li yayınların üst verisi (özet çoğu zaman yok)",
+    "semantic_scholar": "Tüm disiplinler, özellikle bilgisayar, tıp ve doğa bilimleri; atıf ağı güçlü",
+    "arxiv": "Ön baskı: fizik, matematik, bilgisayar, istatistik, nicel biyoloji/finans, ekonomi",
+    "trdizin": "TÜBİTAK ULAKBİM TR Dizin: Türkiye'deki hakemli dergiler, tüm alanlar",
+    "dergipark": "DergiPark: Türk akademik dergileri (yerel dizin; sanat, sosyal, eğitim ağırlıklı)",
+    "europepmc": "PubMed/MEDLINE + PMC + ön baskılar: tıp, sağlık, yaşam bilimleri, psikoloji",
+    "eric": "ERIC: eğitim bilimleri, öğretim, öğrenme, eğitim politikası",
+    "doaj": "DOAJ: hakemli açık erişim dergiler, tüm alanlar, çok dilli",
+    "hal": "HAL: Fransa/Avrupa açık arşivi, beşeri ve sosyal bilimler dahil tüm alanlar",
 }
 DEFAULT_SOURCES = ["openalex", "crossref", "semantic_scholar", "arxiv", "trdizin"]
 

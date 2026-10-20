@@ -349,3 +349,7 @@ table.tbl th { font-size: 12px; color: var(--ink-3); font-weight: 600; text-tran
   .panel-head, .panel-body { padding-left: 18px; padding-right: 18px; }
   .src { grid-template-columns: 24px 34px 1fr; }
 }
+
+.db-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 6px 14px; }
+.db-opt { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; cursor: pointer; }
+.db-opt input { margin-top: 3px; }

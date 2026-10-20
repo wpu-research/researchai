@@ -319,7 +319,14 @@ STAGE_VIEW[1] = (s) => {
     else input = `<textarea data-k="${k}" data-t="${t}" rows="${t === 'lines' ? Math.max(2, (v || []).length + 1) : 2}">${esc(t === 'lines' ? lines(v) : v)}</textarea>`;
     return `<label class="field"><span>${label}</span>${input}</label>`;
   };
+  const picked = new Map((d.databases || []).map((x) => [x.name, x.reason]));
+  const dbs = (S.meta?.databases || []).map((x) => `<label class="db-opt">
+      <input type="checkbox" data-db="${esc(x.name)}" ${picked.has(x.name) ? 'checked' : ''}>
+      <span><b>${esc(x.name)}</b> <span class="small muted">${esc(x.desc)}</span>
+      ${picked.get(x.name) ? `<br><span class="small">↳ ${esc(picked.get(x.name))}</span>` : ''}</span></label>`).join('');
   return `<div class="grid-2">${F1.map(field).join('')}</div>
+    <div class="subhead">Veritabanları <span class="small muted">(2. aşama yalnız işaretlilerde arar)</span></div>
+    <div class="db-list">${dbs}</div>
     ${d.risks?.length ? `<div class="subhead">Riskler</div><div class="warn-box">${ul(d.risks)}</div>` : ''}
     <div class="row" style="margin-top:16px"><button class="btn" id="save1">Değişiklikleri kaydet</button>
     <span class="small muted">Kaydetmek bu ve sonraki aşamaların onayını düşürür.</span></div>`;
@@ -333,6 +340,10 @@ STAGE_BIND[1] = () => {
       const t = el.dataset.t;
       data[el.dataset.k] = t === 'lines' ? unlines(el.value) : t === 'num' ? (el.value ? Number(el.value) : null) : el.value;
     });
+    const old = new Map((S.project.stages[0].data.databases || []).map((x) => [x.name, x.reason]));
+    data.databases = [...document.querySelectorAll('#stage-body [data-db]:checked')]
+      .map((el) => ({ name: el.dataset.db, reason: old.get(el.dataset.db) || 'elle seçildi' }));
+    if (!data.databases.length) return toast('En az bir veritabanı seçin', true);
     saveStage(data);
   };
 };
@@ -350,6 +361,7 @@ STAGE_VIEW[2] = (s, p) => {
       <div class="stat ok"><b>${sel}</b><span>seçili kaynak</span></div>
       <div class="stat"><b>${(d.queries || []).length}</b><span>sorgu</span></div>
     </div>
+    ${d.databases?.length ? `<p class="small muted" style="margin-top:10px">Aranan veritabanları: ${d.databases.map(esc).join(' · ')}</p>` : ''}
     ${errs.length ? `<div class="warn-box" style="margin-top:14px"><b>Yanıt vermeyen kaynaklar:</b> ${errs.map(([k, v]) => `${esc(k)} (${esc(v.slice(0, 60))})`).join(' · ')}</div>` : ''}
     <div class="subhead">Kaynaklar</div>
     <div class="src-tools">

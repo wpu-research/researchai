@@ -14,7 +14,8 @@ import time
 
 from researchai_mcp import disclosure
 from researchai_mcp.normalize import dedupe_key
-from researchai_mcp.search import search_sources
+from researchai_mcp.connectors import dergipark
+from researchai_mcp.search import CATALOG, DEFAULT_SOURCES, search_sources
 from researchai_mcp.verify import Citation, verify_citation
 
 from . import db, llm, text
@@ -69,12 +70,35 @@ def _src_line(s: dict, with_notes: bool = True, abstract_chars: int = 500) -> st
 
 
 # ---------------------------------------------------------------- 1. Fikir
+def databases() -> dict[str, str]:
+    """Bu sunucuda aranabilen veritabanları ve kapsamları."""
+    return {k: v for k, v in CATALOG.items() if k != "dergipark" or dergipark.available()}
+
+
+def pick_databases(raw) -> list[dict]:
+    """Model ya da kullanıcı seçimini bilinen veritabanlarına indirger; boşsa varsayılan küme."""
+    avail = databases()
+    out, seen = [], set()
+    for d in raw if isinstance(raw, list) else []:
+        name = (d.get("name") if isinstance(d, dict) else d) or ""
+        if name in avail and name not in seen:
+            seen.add(name)
+            out.append({"name": name, "reason": (d.get("reason") if isinstance(d, dict) else None) or ""})
+    return out or [{"name": n, "reason": "varsayılan"} for n in DEFAULT_SOURCES if n in avail]
+
+
 async def stage1(pid: str, opts: dict) -> dict:
     pr = _proj(pid)
-    progress(pid, 1, "Araştırma sorusu ve kapsam kartı hazırlanıyor")
-    return await ask_json(pid, 1, "araştırma sorusu ve kapsam kartı", f"""Sen deneyimli bir araştırma danışmanısın.
+    progress(pid, 1, "Araştırma sorusu, kapsam kartı ve veritabanı seçimi hazırlanıyor")
+    catalog = "\n".join(f"- {k}: {v}" for k, v in databases().items())
+    card = await ask_json(pid, 1, "araştırma sorusu, kapsam kartı ve veritabanı seçimi", f"""Sen deneyimli bir araştırma danışmanısın.
 Ham bir fikri, dergiye gidecek bir çalışmanın kapsam kartına çevir. Gerçekçi ol; tek bir makaleye sığacak kadar daralt.
-Çıktı dili: {lang_name(pr['language'])} (search_queries hariç).""", f"""Alan: {pr['field'] or 'belirtilmedi'}
+Literatür taraması için aşağıdaki veritabanlarından fikrin alanına uyanları seç. En az bir genel dizin (openalex ya da
+semantic_scholar) bulunsun; alanla ilgisi olmayan veritabanını seçme (örn. tıp dışı bir konuda europepmc, eğitim dışı
+bir konuda eric). Konu Türkiye'yle ya da Türkçe literatürle ilgiliyse trdizin/dergipark'ı ekle.
+Veritabanları:
+{catalog}
+Çıktı dili: {lang_name(pr['language'])} (search_queries ve veritabanı adları hariç).""", f"""Alan: {pr['field'] or 'belirtilmedi'}
 Ham fikir:
 {pr['idea']}
 
@@ -86,9 +110,12 @@ Ham fikir:
  "method_type": "empirical | humanities | review | mixed",
  "keywords": ["5-8 anahtar kelime"],
  "search_queries": ["literatür taraması için 4-6 kısa sorgu: çoğu İngilizce, 1-2'si Türkçe; her biri 2-5 sözcük"],
+ "databases": [{{"name": "listedeki ad", "reason": "bu fikir için neden (en çok 12 sözcük)"}}],
  "inclusion": ["dahil etme ölçütleri"], "exclusion": ["dışlama ölçütleri"],
  "year_from": yıl ya da null,
  "risks": ["bu çalışmanın 2-3 temel riski"]}}""")
+    card["databases"] = pick_databases(card.get("databases"))
+    return card
 
 
 # ---------------------------------------------------------------- 2. Literatür
@@ -98,11 +125,12 @@ async def stage2(pid: str, opts: dict) -> dict:
     if not queries:
         raise ValueError("1. aşamada arama sorgusu yok")
     yf = card.get("year_from") if isinstance(card.get("year_from"), int) else None
+    dbs = [d["name"] for d in pick_databases(card.get("databases"))]
     merged: dict[str, dict] = {}
     errors: dict[str, str] = {}
     for k, q in enumerate(queries, 1):  # sıralı: kaynakların hız sınırlarına saygı
         progress(pid, 2, f"Arama {k}/{len(queries)}: {q}")
-        res = await search_sources(q, limit=8, year_from=yf)
+        res = await search_sources(q, sources=dbs, limit=8, year_from=yf)
         for name, err in res["errors"].items():
             errors[name] = err
         for p in res["results"]:
@@ -159,7 +187,7 @@ JSON dizi döndür: [{{"id": numara, "score": 0-3, "reason": "en çok 15 sözcü
     for r in rows:
         r["selected"] = id(r) in chosen
     db.replace_sources(pid, rows)
-    return {"queries": queries, "errors": errors, "candidates": len(cands), "raw": len(merged),
+    return {"queries": queries, "databases": dbs, "errors": errors, "candidates": len(cands), "raw": len(merged),
             "auto_selected": len(chosen)}
 
 

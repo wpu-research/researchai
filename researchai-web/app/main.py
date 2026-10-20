@@ -126,6 +126,7 @@ def meta():
             n = con.execute("SELECT COUNT(*) c FROM records").fetchone()["c"]
     return {"llm": llm.enabled(), "models": {"main": llm.model_main(), "fast": llm.model_fast(),
                                              "reviewer": llm.model_reviewer()},
+            "databases": [{"name": k, "desc": v} for k, v in pipeline.databases().items()],
             "stages": db.STAGES, "gates": sorted(db.GATES),
             "dergipark": {"records": n, "sets": DERGIPARK_SETS, **HARVEST}}
 
