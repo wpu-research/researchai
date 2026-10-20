@@ -168,7 +168,7 @@ async def run_stage(pid: str, n: int, opts: RunOpts | None = None):
     _need(pid)
     _check_n(n)
     if not llm.enabled():
-        raise HTTPException(503, "LLM anahtarı (NVIDIA_API_KEY) ayarlı değil")
+        raise HTTPException(503, "LLM anahtarı (ANTHROPIC_API_KEY) ayarlı değil")
     if n > 1 and not db.approved(pid, n - 1):
         raise HTTPException(409, f"Önce {n - 1}. aşama onaylanmalı")
     if (pid, n) in TASKS:

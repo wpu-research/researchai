@@ -19,7 +19,7 @@ from researchai_mcp.verify import Citation, verify_citation
 
 from . import db, llm, text
 
-TOOL = "ResearchAI (NVIDIA NIM)"
+TOOL = "ResearchAI (Anthropic Claude)"
 
 
 def label(n: int) -> str:

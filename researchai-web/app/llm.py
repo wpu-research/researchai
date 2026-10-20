@@ -1,36 +1,44 @@
-"""NVIDIA NIM (OpenAI uyumlu) istemcisi.
+"""Anthropic Claude istemcisi (resmi `anthropic` SDK).
 
 Her çağrı token kullanımını döndürür; JSON isteyen çağrılarda yanıt sağlamca ayrıştırılır.
 Birincil model zaman aşımına uğrar ya da hata verirse yedek modele geçilir.
 """
 from __future__ import annotations
 
-import asyncio
 import json
 import os
 import re
 from dataclasses import dataclass
 
-import httpx
+import anthropic
 
-URL = os.environ.get("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1") + "/chat/completions"
+# Güvenlik sınıflandırıcısı reddederse API isteği aynı çağrı içinde uygun modelde yeniden çalıştırır.
+FALLBACK_BETA = "server-side-fallback-2026-07-01"
+# Düşünme (thinking) çıktı bütçesinden yer; çağıranın istediği metin uzunluğunun üstüne eklenir.
+THINKING_HEADROOM = 16000
 
 
 def model_main() -> str:
-    return os.environ.get("RESEARCHAI_MODEL", "nvidia/nemotron-3.5-super-vl-120b-a12b")
+    return os.environ.get("RESEARCHAI_MODEL", "claude-opus-5-5")
 
 
 def model_fast() -> str:
-    return os.environ.get("RESEARCHAI_MODEL_FAST", "nvidia/nemotron-3.5-lightning-30b-a3b")
+    return os.environ.get("RESEARCHAI_MODEL_FAST", "claude-haiku-5-5")
 
 
 def model_reviewer() -> str:
-    """Hakem simülasyonunda ikinci, farklı aileden model (kör ve bağımsız görüş için)."""
-    return os.environ.get("RESEARCHAI_MODEL_REVIEWER", "openai/gpt-oss-20b")
+    """Hakem simülasyonunda ikinci, farklı model (kör ve bağımsız görüş için)."""
+    return os.environ.get("RESEARCHAI_MODEL_REVIEWER", "claude-sonnet-5-5")
 
 
 def enabled() -> bool:
-    return bool(os.environ.get("NVIDIA_API_KEY", "").strip())
+    return bool(os.environ.get("ANTHROPIC_API_KEY", "").strip())
+
+
+def _client(timeout: float) -> anthropic.AsyncAnthropic:
+    ws = os.environ.get("ANTHROPIC_WORKSPACE_ID", "").strip()
+    return anthropic.AsyncAnthropic(timeout=timeout, max_retries=3,
+                                    default_headers={"anthropic-workspace-id": ws} if ws else None)
 
 
 class LLMError(RuntimeError):
@@ -68,43 +76,46 @@ def parse_json(text: str):
     raise LLMError("modelden geçerli JSON gelmedi: " + t[:160])
 
 
-async def _call(model: str, messages: list[dict], max_tokens: int, temperature: float, timeout: float) -> Reply:
-    key = os.environ.get("NVIDIA_API_KEY", "").strip()
-    if not key:
-        raise LLMError("NVIDIA_API_KEY ayarlı değil")
-    body = {"model": model, "messages": messages, "max_tokens": max_tokens, "temperature": temperature,
-            "chat_template_kwargs": {"enable_thinking": False}}
-    async with httpx.AsyncClient(timeout=timeout) as c:
-        for attempt in range(3):
-            r = await c.post(URL, json=body, headers={"Authorization": f"Bearer {key}"})
-            if r.status_code == 429 or r.status_code >= 500:
-                await asyncio.sleep(3 * (attempt + 1))
-                continue
-            break
-    if r.status_code != 200:
-        raise LLMError(f"{model}: HTTP {r.status_code} {r.text[:160]}")
-    d = r.json()
-    msg = d["choices"][0]["message"]
-    text = msg.get("content") or ""
+async def _call(model: str, system: str, user: str, max_tokens: int, timeout: float) -> Reply:
+    if not enabled():
+        raise LLMError("ANTHROPIC_API_KEY ayarlı değil")
+    kw = {}
+    if not model.startswith("claude-haiku"):
+        kw = {"betas": [FALLBACK_BETA], "fallbacks": "default"}
+    effort = "low" if model.startswith("claude-haiku") else "medium"
+    try:
+        async with _client(timeout) as c:
+            async with c.beta.messages.stream(
+                model=model, max_tokens=max_tokens + THINKING_HEADROOM, system=system,
+                messages=[{"role": "user", "content": user}],
+                output_config={"effort": effort}, **kw,
+            ) as stream:
+                msg = await stream.get_final_message()
+    except anthropic.APIStatusError as ex:
+        raise LLMError(f"{model}: HTTP {ex.status_code} {str(ex.message)[:160]}") from ex
+    except anthropic.APIConnectionError as ex:
+        raise LLMError(f"{model}: bağlantı hatası ({ex})") from ex
+    if msg.stop_reason == "refusal":
+        raise LLMError(f"{model}: istek reddedildi")
+    text = "".join(b.text for b in msg.content if b.type == "text")
     if not text.strip():
         raise LLMError(f"{model}: boş yanıt")
-    u = d.get("usage") or {}
-    return Reply(text, d.get("model") or model, u.get("prompt_tokens", 0), u.get("completion_tokens", 0))
+    return Reply(text, msg.model, msg.usage.input_tokens, msg.usage.output_tokens)
 
 
 async def chat(system: str, user: str, model: str | None = None, max_tokens: int = 2000,
-               temperature: float = 0.3, timeout: float = 150.0, fallback: bool = True) -> Reply:
-    messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
+               temperature: float | None = None, timeout: float = 300.0, fallback: bool = True) -> Reply:
+    """`temperature` geriye uyumluluk için kabul edilir; güncel Claude modelleri örnekleme ayarı almaz."""
     first = model or model_main()
     try:
-        return await _call(first, messages, max_tokens, temperature, timeout)
-    except (LLMError, httpx.HTTPError) as ex:
+        return await _call(first, system, user, max_tokens, timeout)
+    except LLMError as ex:
         alt = model_fast() if first != model_fast() else model_main()
         if not fallback or alt == first:
-            raise LLMError(str(ex)) from ex
+            raise
         try:
-            return await _call(alt, messages, max_tokens, temperature, timeout)
-        except (LLMError, httpx.HTTPError) as ex2:
+            return await _call(alt, system, user, max_tokens, timeout)
+        except LLMError as ex2:
             raise LLMError(f"{ex}; yedek de başarısız: {ex2}") from ex2
 
 

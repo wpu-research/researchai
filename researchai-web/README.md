@@ -30,16 +30,18 @@ Bir aşama yeniden çalıştırılır ya da düzenlenirse o ve sonraki aşamalar
 ## Yerelde çalıştırma
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -e ../researchai-mcp -e ".[dev]"
-NVIDIA_API_KEY=... RESEARCHAI_DATA=./data .venv/bin/uvicorn app.main:app --port 8765
+set -a && . ./.env && set +a   # ANTHROPIC_API_KEY, ANTHROPIC_WORKSPACE_ID (git'e girmez)
+RESEARCHAI_DATA=./data .venv/bin/uvicorn app.main:app --port 8765
 .venv/bin/python -m pytest -q
 ```
 
 ## Ortam değişkenleri
-`NVIDIA_API_KEY` (zorunlu), `RESEARCHAI_MODEL` / `RESEARCHAI_MODEL_FAST` / `RESEARCHAI_MODEL_REVIEWER`,
+`ANTHROPIC_API_KEY` (zorunlu), `ANTHROPIC_WORKSPACE_ID` (anahtar bir workspace'e bağlı değilse zorunlu),
+`RESEARCHAI_MODEL` (varsayılan `claude-opus-5-5`) / `RESEARCHAI_MODEL_FAST` (`claude-haiku-5-5`) /
+`RESEARCHAI_MODEL_REVIEWER` (`claude-sonnet-5-5`, Hakem B),
 `RESEARCHAI_DATA` (varsayılan `data`), `DERGIPARK_SETS` (açılışta dizin boşsa toplanan dergiler),
 `DERGIPARK_AUTOHARVEST=0` (otomatik toplamayı kapatır).
 
 ## Bilinen sınırlar
-- Erişim koruması yok: adresi bilen herkes kullanabilir ve NVIDIA kotasını harcayabilir.
+- Erişim koruması yok: adresi bilen herkes kullanabilir ve Anthropic API bakiyesini harcayabilir.
 - Uzun işler süreç içinde çalışır; sunucu yeniden başlarsa yarıdaki aşama "hata" olur, yeniden çalıştırılır.
-- Ücretsiz NVIDIA katmanında modeller sıraya girebilir; 2. aşama (6 sorgu) ~1,5 dk, 5. aşama ~2 dk sürer.

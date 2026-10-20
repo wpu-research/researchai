@@ -3,3 +3,6 @@ AutoResearchClaw/
 
 # researchai-harvest ile yeniden üretilir
 researchai-mcp/data/*.sqlite*
+
+# gizli anahtarlar
+.env
