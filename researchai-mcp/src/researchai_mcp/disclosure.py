@@ -80,9 +80,15 @@ def generate_disclosure(run_id: str, language: str = "tr", venue_profile: str | 
     log = read_log(run_id)
     if not log:
         return {"statement_md": t["none"], "table_md": "", "warnings": ["no_log_entries"]}
-    rows = "\n".join(f"- {t['row'].format(**e)}" for e in log)
-    rev = sorted({e["stage"] for e in log if e["human_review"]})
-    unrev = sorted({e["stage"] for e in log if not e["human_review"]})
+    # Aşama, son kaydı insan incelemesiyse incelenmiş sayılır: inceleme kendinden önceki YZ çıktısını kapsar,
+    # sonradan yapılan YZ çağrısı ise yeniden inceleme ister. Modelsiz kayıtlar yalnız inceleme notudur.
+    last: dict[str, bool] = {}
+    for e in log:
+        last[e["stage"]] = e["human_review"]
+    rev = sorted(s for s, ok in last.items() if ok)
+    unrev = sorted(s for s, ok in last.items() if not ok)
+    uses = list(dict.fromkeys((e["stage"], e["tool"], e["model"], e["purpose"]) for e in log if e.get("model")))
+    rows = "\n".join(f"- {t['row'].format(stage=s, tool=tl, model=m, purpose=p)}" for s, tl, m, p in uses)
     parts = [t["intro"], rows]
     if not unrev:
         parts.append(t["all"])
@@ -91,8 +97,7 @@ def generate_disclosure(run_id: str, language: str = "tr", venue_profile: str | 
             parts.append(t["reviewed"].format(s=", ".join(rev)))
         parts.append(t["unreviewed"].format(s=", ".join(unrev)))
     table = "\n".join([t["cols"], "|---|---|---|---|---|"] + [
-        f"| {e['stage']} | {e['tool']} | {e['model']} | {e['purpose']} | {t['yes'] if e['human_review'] else t['no']} |"
-        for e in log])
+        f"| {s} | {tl} | {m} | {p} | {t['yes'] if last[s] else t['no']} |" for s, tl, m, p in uses])
     warnings = [t["warn"].format(s=s) for s in unrev]
     if venue_profile:
         warnings.append(f"venue_profile '{venue_profile}' henüz tanımlı değil; genel biçim kullanıldı")

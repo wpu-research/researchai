@@ -174,3 +174,16 @@ def test_disclosure_all_reviewed(runs):
 def test_disclosure_empty_log(runs):
     out = disclosure.generate_disclosure("nolog", "tr")
     assert out["warnings"] == ["no_log_entries"]
+
+
+def test_disclosure_review_covers_earlier_ai_use_in_same_stage(runs):
+    disclosure.log_ai_use("r3", "taslak", "ResearchAI", "m1", "metin önerisi", False)
+    disclosure.log_ai_use("r3", "taslak", "ResearchAI", "m1", "metin önerisi", False)
+    disclosure.log_ai_use("r3", "taslak", "yazar", "", "inceleme ve onay", True)
+    disclosure.log_ai_use("r3", "sentez", "ResearchAI", "m1", "boşluk haritası", True)
+    disclosure.log_ai_use("r3", "sentez", "ResearchAI", "m1", "yeniden üretim", False)
+    out = disclosure.generate_disclosure("r3", "tr")
+    assert "incelemesi kaydedilmemiştir: sentez." in out["statement_md"]
+    assert "gözden geçirilmiştir: taslak." in out["statement_md"]
+    assert out["statement_md"].count("metin önerisi") == 1  # yinelenen kullanım tek satır
+    assert "inceleme ve onay" not in out["table_md"]  # modelsiz inceleme kaydı YZ kullanımı değil
