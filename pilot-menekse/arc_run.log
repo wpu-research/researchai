@@ -1,0 +1,85 @@
+Preflight check... Hardware advisory: Local GPU (NVIDIA GeForce RTX 4070 Laptop GPU, 8188 MB VRAM) has limited memory. Complex deep learning experiments may be slow or run out of memory. Consider using a remote GPU server for best results.
+PyTorch installation error: Command '['/home/wpu/Desktop/Urunler/ResearchAI/AutoResearchClaw/.venv/bin/python3', '-m', 'pip', 'install', '--quiet', 'torch']' timed out after 300 seconds
+PyTorch could not be installed; sandbox will use CPU-only packages
+[rate-limit] OpenAlex Retry-After=41843 (>300s). Skipping request instead of waiting.
+S2 rate-limited (429). Waiting 2.1s (attempt 1/3)...
+S2 rate-limited (429). Waiting 4.4s (attempt 2/3)...
+S2 circuit breaker TRIPPED after 3 consecutive 429s. Cooldown: 120s (trip #1). arXiv still active.
+[rate-limit] OpenAlex Retry-After=41829 (>300s). Skipping request instead of waiting.
+[rate-limit] OpenAlex Retry-After=41824 (>300s). Skipping request instead of waiting.
+[rate-limit] OpenAlex Retry-After=41819 (>300s). Skipping request instead of waiting.
+[rate-limit] OpenAlex Retry-After=41814 (>300s). Skipping request instead of waiting.
+[rate-limit] OpenAlex Retry-After=41809 (>300s). Skipping request instead of waiting.
+[rate-limit] OpenAlex Retry-After=41804 (>300s). Skipping request instead of waiting.
+[rate-limit] OpenAlex Retry-After=41799 (>300s). Skipping request instead of waiting.
+[rate-limit] OpenAlex Retry-After=41793 (>300s). Skipping request instead of waiting.
+[rate-limit] OpenAlex Retry-After=41788 (>300s). Skipping request instead of waiting.
+[rate-limit] OpenAlex Retry-After=41783 (>300s). Skipping request instead of waiting.
+[rate-limit] OpenAlex Retry-After=41778 (>300s). Skipping request instead of waiting.
+[rate-limit] OpenAlex Retry-After=41771 (>300s). Skipping request instead of waiting.
+[rate-limit] OpenAlex Retry-After=41765 (>300s). Skipping request instead of waiting.
+[rate-limit] OpenAlex Retry-After=41760 (>300s). Skipping request instead of waiting.
+[rate-limit] OpenAlex Retry-After=41755 (>300s). Skipping request instead of waiting.
+[rate-limit] OpenAlex Retry-After=41751 (>300s). Skipping request instead of waiting.
+[rate-limit] OpenAlex Retry-After=41746 (>300s). Skipping request instead of waiting.
+[rate-limit] OpenAlex Retry-After=41741 (>300s). Skipping request instead of waiting.
+[rate-limit] OpenAlex Retry-After=41737 (>300s). Skipping request instead of waiting.
+[rate-limit] OpenAlex Retry-After=41732 (>300s). Skipping request instead of waiting.
+[rate-limit] OpenAlex Retry-After=41722 (>300s). Skipping request instead of waiting.
+[rate-limit] OpenAlex Retry-After=41717 (>300s). Skipping request instead of waiting.
+[rate-limit] OpenAlex Retry-After=41713 (>300s). Skipping request instead of waiting.
+S2 circuit breaker → OPEN (probe failed). Next cooldown: 240s (trip #2)
+[rate-limit] OpenAlex Retry-After=41707 (>300s). Skipping request instead of waiting.
+[rate-limit] OpenAlex Retry-After=41702 (>300s). Skipping request instead of waiting.
+[rate-limit] OpenAlex Retry-After=41695 (>300s). Skipping request instead of waiting.
+OK - ACP session ready (claude via acpx)
+ResearchClaw v0.5.0 — Starting pipeline
+  Run ID:  rc-20261020-121504-2b47ff
+  Topic:   Digital nature and the sublime in the Anthropocene: from Caspar David Friedrich's romantic landscape to Refik Anadol's and Quayola's algorithmic ecosystems — scale and immersion shifts in the aesthetics of the sublime
+  Output:  ../pilot-menekse/arc_run
+  Mode:    full-auto
+  HITL:    gate-only
+  From:    Stage 1: TOPIC_INIT
+  To:      Stage 7: SYNTHESIS
+
+[rc-20261020-121504-2b47ff] Stage 01/23 TOPIC_INIT — running...
+[rc-20261020-121504-2b47ff] Stage 01/23 TOPIC_INIT — done (356.2s) → goal.md, hardware_profile.json
+[rc-20261020-121504-2b47ff] Stage 02/23 PROBLEM_DECOMPOSE — running...
+[rc-20261020-121504-2b47ff] Stage 02/23 PROBLEM_DECOMPOSE — done (62.9s) → problem_tree.md
+[rc-20261020-121504-2b47ff] Stage 03/23 SEARCH_STRATEGY — running...
+[rc-20261020-121504-2b47ff] Stage 03/23 SEARCH_STRATEGY — done (31.6s) → search_plan.yaml, sources.json, queries.json
+[rc-20261020-121504-2b47ff] Stage 04/23 LITERATURE_COLLECT — running...
+[rc-20261020-121504-2b47ff] Stage 04/23 LITERATURE_COLLECT — done (185.3s) → candidates.jsonl, web_context.md, web_search_result.json, references.bib, search_meta.json
+[rc-20261020-121504-2b47ff] Stage 05/23 LITERATURE_SCREEN — running...
+
+────────────────────────────────────────────────────────────────────────────────
+  HITL | Stage 05: LITERATURE_SCREEN
+  Gate approval required
+────────────────────────────────────────────────────────────────────────────────
+
+  Stage output summary:
+  Stage 5 (LITERATURE_SCREEN) completed: blocked_approval
+  Artifacts: shortlist.jsonl
+  
+  --- shortlist.jsonl ---
+  {"paper_id": "arxiv-2601.21141", "title": "Optimization and Mobile Deployment for Anthropocene Neural Style Transfer", "year": 2026, "venue": "cs.HC", "citation_count": 0, "doi": "", "arxiv_id": "2601.21141", "url": "https://arxiv.org/abs/2601.21141", "source": "arxiv", "cite_key": "chen2026optimization", "relevance_score": 0.88, "quality_score": 0.5, "keep_reason": "Directly on-topic: algorithmic (neural style transfer) aesthetic synthesis of Anthropocene human-altered landscapes, bridging mate
+
+  Output files:
+    shortlist.jsonl
+
+  Available actions:
+  [a] Approve and continue
+  [r] Reject and rollback
+  [e] Edit stage output
+  [c] Start collaborative chat
+  [s] Skip this stage
+  [q] Abort pipeline
+  [v] View full stage output
+
+Action > 
+[rc-20261020-121504-2b47ff] Stage 05/23 LITERATURE_SCREEN — FAILED (59.6s) — Aborted by user
+[rc-20261020-121504-2b47ff] Pipeline aborted by user at LITERATURE_SCREEN
+[rc-20261020-121504-2b47ff] Deliverables packaged → ../pilot-menekse/arc_run/deliverables
+  HITL: 1 interventions, 0s human time
+
+Pipeline complete: 4/5 stages done, 1 failed

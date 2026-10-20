@@ -1,0 +1,55 @@
+date_window:
+  end: 2026
+  start: 1990
+deduplication: by_doi_then_title
+filters:
+  languages:
+  - en
+  types:
+  - journal-article
+  - conference-paper
+  - book-chapter
+  - preprint
+max_results_per_query: 25
+search_strategies:
+- max_results_per_query: 30
+  name: Core topic — sublime, digital nature, Anthropocene
+  queries:
+  - digital sublime aesthetics
+  - technological sublime media art
+  - Anthropocene nature aesthetics
+  - Romantic landscape sublime painting
+  - immersion scale sublime art
+- name: Theoretical foundations — Kant, Burke, sublime theory
+  queries:
+  - Kant mathematical dynamical sublime
+  - Burke beauty sublime terror
+  - Caspar David Friedrich landscape theory
+  - phenomenology immersion aesthetic experience
+- name: Related methods — CLIP, VLM aesthetics probes
+  queries:
+  - CLIP concept directions interpretability
+  - vision language model aesthetics
+  - linear probing embedding space
+  - computational aesthetics image analysis
+  - diffusion model prompt steering
+- name: Benchmarks and datasets
+  queries:
+  - WikiArt painting style dataset
+  - AVA aesthetic visual analysis
+  - image aesthetic prediction benchmark
+  - art historical corpus dataset
+- name: Applications — generative ecosystems, installation art
+  queries:
+  - Refik Anadol data sculpture
+  - Quayola algorithmic landscape
+  - generative art immersive installation
+  - new media environmental art
+sources:
+- semantic_scholar
+- arxiv
+- jstor
+- google_scholar
+topic: Digital nature and the sublime in the Anthropocene — from Caspar David Friedrich's
+  Romantic landscape to Refik Anadol's and Quayola's algorithmic ecosystems; scale
+  and immersion shifts in the aesthetics of the sublime

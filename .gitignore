@@ -1,0 +1,5 @@
+# üçüncü taraf klon (github.com/aiming-lab/AutoResearchClaw), kendi deposu var
+AutoResearchClaw/
+
+# researchai-harvest ile yeniden üretilir
+researchai-mcp/data/*.sqlite*

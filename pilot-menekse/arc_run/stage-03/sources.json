@@ -1,0 +1,96 @@
+{
+  "sources": [
+    {
+      "id": "S1",
+      "name": "The Technological Sublime (David E. Nye)",
+      "type": "book",
+      "url": "https://mitpress.mit.edu/9780262640343/american-technological-sublime/",
+      "status": "verified",
+      "query": "technological sublime media art",
+      "verified_at": "2026-10-20"
+    },
+    {
+      "id": "S2",
+      "name": "Kant, Critique of the Power of Judgment (Analytic of the Sublime)",
+      "type": "book",
+      "url": "https://plato.stanford.edu/entries/kant-aesthetics/",
+      "status": "verified",
+      "query": "Kant mathematical dynamical sublime",
+      "verified_at": "2026-10-20"
+    },
+    {
+      "id": "S3",
+      "name": "Edmund Burke, A Philosophical Enquiry into the Origin of Our Ideas of the Sublime and Beautiful",
+      "type": "book",
+      "url": "https://www.gutenberg.org/ebooks/15043",
+      "status": "verified",
+      "query": "Burke beauty sublime terror",
+      "verified_at": "2026-10-20"
+    },
+    {
+      "id": "S4",
+      "name": "Learning Transferable Visual Models From Natural Language Supervision (CLIP)",
+      "type": "conference-paper",
+      "url": "https://arxiv.org/abs/2103.00020",
+      "status": "verified",
+      "query": "CLIP concept directions interpretability",
+      "verified_at": "2026-10-20"
+    },
+    {
+      "id": "S5",
+      "name": "AVA: A Large-Scale Database for Aesthetic Visual Analysis",
+      "type": "conference-paper",
+      "url": "https://ieeexplore.ieee.org/document/6247954",
+      "status": "verified",
+      "query": "AVA aesthetic visual analysis",
+      "verified_at": "2026-10-20"
+    },
+    {
+      "id": "S6",
+      "name": "WikiArt / Painter by Numbers dataset",
+      "type": "dataset",
+      "url": "https://www.wikiart.org/",
+      "status": "verified",
+      "query": "WikiArt painting style dataset",
+      "verified_at": "2026-10-20"
+    },
+    {
+      "id": "S7",
+      "name": "High-Resolution Image Synthesis with Latent Diffusion Models",
+      "type": "conference-paper",
+      "url": "https://arxiv.org/abs/2112.10752",
+      "status": "verified",
+      "query": "diffusion model prompt steering",
+      "verified_at": "2026-10-20"
+    },
+    {
+      "id": "S8",
+      "name": "Refik Anadol Studio \u2014 works and documentation",
+      "type": "website",
+      "url": "https://refikanadol.com/works/",
+      "status": "verified",
+      "query": "Refik Anadol data sculpture",
+      "verified_at": "2026-10-20"
+    },
+    {
+      "id": "S9",
+      "name": "Quayola \u2014 Artist portfolio and projects",
+      "type": "website",
+      "url": "https://quayola.com/",
+      "status": "verified",
+      "query": "Quayola algorithmic landscape",
+      "verified_at": "2026-10-20"
+    },
+    {
+      "id": "S10",
+      "name": "Timothy Morton, Hyperobjects: Philosophy and Ecology after the End of the World",
+      "type": "book",
+      "url": "https://www.upress.umn.edu/book-division/books/hyperobjects",
+      "status": "verified",
+      "query": "Anthropocene nature aesthetics",
+      "verified_at": "2026-10-20"
+    }
+  ],
+  "count": 10,
+  "generated": "2026-10-20T12:22:35+00:00"
+}
