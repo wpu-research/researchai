@@ -11,4 +11,4 @@ COPY researchai-web/app researchai-web/app
 RUN pip install ./researchai-web
 WORKDIR /srv/researchai-web
 EXPOSE 8080
-CMD ["sh", "-c", "uvicorn app.main:app --host :: --port ${PORT:-8080} --proxy-headers --forwarded-allow-ips='*'"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080} --proxy-headers --forwarded-allow-ips='*'"]
