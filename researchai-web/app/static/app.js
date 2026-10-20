@@ -130,7 +130,7 @@ async function renderHome() {
   </section>
   <div class="section-head"><h2>Projeler</h2><span class="muted small">${list.length} proje</span></div>
   ${list.length ? `<div class="projects">${list.map(projectCard).join('')}</div>`
-    : '<div class="empty">Henüz proje yok. Sağ üstteki formla ilk araştırmanızı başlatın.</div>'}`;
+    : '<div class="empty">Henüz proje yok. “Yeni araştırma” formuyla ilk çalışmanızı başlatın.</div>'}`;
   document.getElementById('new-form').onsubmit = async (e) => {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.target));

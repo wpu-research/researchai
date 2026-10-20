@@ -47,6 +47,7 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 body {
+  overflow-x: hidden;
   background: var(--bg);
   background-image: radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--ink) 7%, transparent) 1px, transparent 0);
   background-size: 22px 22px;
@@ -341,7 +342,9 @@ table.tbl th { font-size: 12px; color: var(--ink-3); font-weight: 600; text-tran
 }
 @media (max-width: 560px) {
   .app { padding: 20px 16px 60px; }
-  .topbar { padding: 10px 16px; }
+  .topbar { padding: 10px 16px; gap: 10px; }
+  #llm-chip { max-width: 150px; overflow: hidden; text-overflow: ellipsis; display: block; }
+  .brand-name { font-size: 17px; }
   .pipeline-mini { grid-template-columns: repeat(2, 1fr); }
   .panel-head, .panel-body { padding-left: 18px; padding-right: 18px; }
   .src { grid-template-columns: 24px 34px 1fr; }
