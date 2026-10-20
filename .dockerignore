@@ -7,3 +7,4 @@ pilot-menekse
 **/data
 **/runs
 .git
+**/.env
